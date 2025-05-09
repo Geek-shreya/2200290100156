@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Heatmap } from '@mui/x-charts/Heatmap';
+import { Heatmap } from 'recharts';
 import { getStocks, getStockData } from '../services/api';
-import { StockInfo } from '../types/stocks';
+import { StockInfo, StockDataPoint } from '../types/stocks';
 
 export default function CorrelationHeatmap() {
   const [stocks, setStocks] = useState<StockInfo[]>([]);
@@ -28,14 +28,14 @@ export default function CorrelationHeatmap() {
   useEffect(() => {
     const calculateCorrelations = async () => {
       if (stocks.length === 0) return;
-      
+
       setLoading(true);
       try {
         const allData = await Promise.all(
           stocks.map(({ ticker }) => getStockData(ticker, timeFrame))
         );
-        
-        const correlations = stocks.map((_, i) => 
+
+        const correlations = stocks.map((_, i) =>
           stocks.map((_, j) => calculatePearson(allData[i], allData[j]))
         );
         setCorrelationData(correlations);
@@ -48,47 +48,48 @@ export default function CorrelationHeatmap() {
     calculateCorrelations();
   }, [stocks, timeFrame]);
 
+  // Correct the calculation of Pearson's correlation
   function calculatePearson(stockA: StockDataPoint[], stockB: StockDataPoint[]): number {
     if (stockA.length !== stockB.length || stockA.length === 0) return 0;
-    
+
     const n = stockA.length;
     const sumA = stockA.reduce((sum, item) => sum + item.price, 0);
     const sumB = stockB.reduce((sum, item) => sum + item.price, 0);
-    
+
     const sumASq = stockA.reduce((sum, item) => sum + Math.pow(item.price, 2), 0);
     const sumBSq = stockB.reduce((sum, item) => sum + Math.pow(item.price, 2), 0);
-    
+
     const pSum = stockA.reduce((sum, _, idx) => sum + (stockA[idx].price * stockB[idx].price), 0);
-    
+
     const num = pSum - (sumA * sumB / n);
-    const den = Math.sqrt((sumASq - Math.pow(sumA, 2) / n) * Math.sqrt((sumBSq - Math.pow(sumB, 2) / n));
-    
+    const den = Math.sqrt((sumASq - Math.pow(sumA, 2) / n) * (sumBSq - Math.pow(sumB, 2) / n));
+
     return den !== 0 ? num / den : 0;
   }
 
   return (
     <div className="heatmap-container">
       <div className="time-frame-selector" style={{ marginBottom: '20px' }}>
-        <button 
+        <button
           onClick={() => setTimeFrame(10)}
           style={{ marginRight: '10px', padding: '5px 10px' }}
         >
           10 min
         </button>
-        <button 
+        <button
           onClick={() => setTimeFrame(30)}
           style={{ marginRight: '10px', padding: '5px 10px' }}
         >
           30 min
         </button>
-        <button 
+        <button
           onClick={() => setTimeFrame(60)}
           style={{ padding: '5px 10px' }}
         >
           1 hour
         </button>
       </div>
-      
+
       {loading ? (
         <p>Loading correlation data...</p>
       ) : stocks.length > 0 ? (
@@ -104,8 +105,8 @@ export default function CorrelationHeatmap() {
                 type: 'continuous',
                 min: -1,
                 max: 1,
-                colors: ['#d32f2f', '#ffffff', '#2e7d32']
-              }
+                colors: ['#d32f2f', '#ffffff', '#2e7d32'],
+              },
             }}
           />
         </div>
